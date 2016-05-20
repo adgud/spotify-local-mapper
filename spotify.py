@@ -17,13 +17,22 @@ class Spotify:
         pass
 
     def search(self, query_string, search_limit=1):
-        url = self.__API_URL + 'search?type=track&limit=' + str(search_limit) + '&q=' + query_string
+        params = {
+            'type': 'track',
+            'limit': str(search_limit),
+            'q': query_string
+        }
+        url = self.__API_URL + 'search'
+        search_request = requests.get(url, params=params)
 
-        r = requests.get(url)
-        if r.status_code != 200:
-            print('search request failed:', r.status_code, file=sys.stderr)
+        if search_request.status_code != 200:
+            print('search request failed:', search_request.status_code, file=sys.stderr)
             return None
-        response_json = json.loads(r.text)
+        response_json = search_request.json()
+
+        if response_json['tracks']['total'] == 0:
+            print('nothing found:',query_string, file=sys.stderr)
+            return None
 
         search_results = []
         for i in range(search_limit):
@@ -102,6 +111,38 @@ class Spotify:
         response = create_playlist_request.json()
         if create_playlist_request.status_code == 201:
             return response['id']
+        else:
+            print(response, file=sys.stderr)
+            return None
+
+    def add_tracks_to_playlist(self, username, playlist_id, track_ids, position=None):
+        if self.__access_token is None:
+            print('not authorized yet', file=sys.stderr)
+            raise ValueError
+
+        headers = {
+            'Authorization': 'Bearer ' + self.__access_token,
+            'Content-Type': 'application/json'
+        }
+
+        uris = ''
+        if type(track_ids) is list:
+            for track_id in track_ids:
+                uris += track_id + ','
+            uris = uris[:-1]    # strip last comma
+        else:
+            uris = track_ids
+
+        params = {
+            'position': position,
+            'uris': uris
+        }
+
+        url = self.__API_URL + 'users/' + username + '/playlists/' + playlist_id + '/tracks'
+        add_tracks_request = requests.post(url, params=params, headers=headers)
+        response = add_tracks_request.json()
+        if add_tracks_request.status_code == 201:
+            return response['snapshot_id']
         else:
             print(response, file=sys.stderr)
             return None
