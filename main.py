@@ -1,20 +1,16 @@
 import os
-import re
 import requests
 import json
 from spotify import Spotify
 
 
 def get_mp3_files(path):
-    files = os.listdir(path)
     mp3_files = []
-    for file in files:
-        match = re.search('\.mp3$', file)
-        if match is not None:
-            full_path = os.path.join(path, file)
-            mp3_files.append(full_path)
+    for path, dirs, files in os.walk(path):
+        for name in files:
+            if name.endswith('.mp3'):
+                mp3_files.append(os.path.join(path, name))
     return mp3_files
-
 
 def get_mp3_tags(filename):
     from mutagen.id3 import ID3
