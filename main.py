@@ -21,9 +21,18 @@ def read_id3(filename):
         return None
 
     title, artist, album = '', '', ''
+    # todo: properly convert to utf8
     try:
         title = audio["TIT2"].text[0]
+    except KeyError as e:
+        print('failed to read ID3 tag', str(e), 'from:', filename, file=sys.stderr)
+
+    try:
         artist = audio['TPE1'].text[0]
+    except KeyError as e:
+        print('failed to read ID3 tag', str(e), 'from:', filename, file=sys.stderr)
+
+    try:
         album = audio['TALB'].text[0]
     except KeyError as e:
         print('failed to read ID3 tag', str(e), 'from:', filename, file=sys.stderr)
@@ -32,7 +41,7 @@ def read_id3(filename):
         print('no tags found for file', filename, file=sys.stderr)
         return None
 
-    return {'artist':artist, 'title':title, 'album':album}
+    return {'artist':artist, 'title':title, 'album': album}
 
 
 def main():
