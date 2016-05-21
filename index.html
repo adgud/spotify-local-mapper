@@ -5,6 +5,12 @@
     <title>spotify-local-mapper</title>
 </head>
 <body>
-    Test
+    <script>
+        if (document.location.hash != '') {
+                var url = window.location.href.split('#')[0];
+                var hash = window.location.hash.substring(1)
+                document.write(hash);
+        }
+    </script>
 </body>
 </html>
