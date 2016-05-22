@@ -29,7 +29,7 @@ class Spotify:
         search_request = requests.get(url, params=params)
 
         if search_request.status_code != 200:
-            print('search request failed:', search_request.status_code, file=sys.stderr)
+            print('Search request failed:', search_request.status_code, file=sys.stderr)
             return None
         response_json = search_request.json()
 
@@ -39,19 +39,13 @@ class Spotify:
 
         search_results = []
         for i in range(search_limit):
-            artist = response_json['tracks']['items'][i]['artists'][0]['name']
-            title = response_json['tracks']['items'][i]['name']
-            album = response_json['tracks']['items'][i]['album']['name']
-            track_id = response_json['tracks']['items'][i]['id']
-            uri = response_json['tracks']['items'][i]['uri']
-            spotify_url = response_json['tracks']['items'][i]['external_urls']['spotify']
             result = {
-                'artist': artist,
-                'title': title,
-                'album': album,
-                'id': track_id,
-                'spotify_url': spotify_url,
-                'uri': uri
+                'artist': response_json['tracks']['items'][i]['artists'][0]['name'],
+                'title': response_json['tracks']['items'][i]['name'],
+                'album': response_json['tracks']['items'][i]['album']['name'],
+                'id': response_json['tracks']['items'][i]['id'],
+                'spotify_url': response_json['tracks']['items'][i]['external_urls']['spotify'],
+                'uri': response_json['tracks']['items'][i]['uri']
             }
             search_results.append(result)
 
@@ -72,7 +66,7 @@ class Spotify:
         }
         auth_url = self.__AUTH_URL + '?' + urllib.parse.urlencode(params)
         webbrowser.open(auth_url)
-        self.__access_token = input('paste token here: ')
+        self.__access_token = input('Paste token here: ')
 
     def get_access_token(self):
         return self.__access_token
@@ -82,7 +76,7 @@ class Spotify:
 
     def create_playlist(self, playlist_name, public=False):
         if self.__access_token is None:
-            print('not authorized yet', file=sys.stderr)
+            print('Not authorized yet', file=sys.stderr)
             return None
 
         headers = {
@@ -106,7 +100,7 @@ class Spotify:
 
     def add_tracks_to_playlist(self, playlist_id, track_ids, position=None):
         if self.__access_token is None:
-            print('not authorized yet', file=sys.stderr)
+            print('Not authorized yet', file=sys.stderr)
             return None
 
         headers = {
