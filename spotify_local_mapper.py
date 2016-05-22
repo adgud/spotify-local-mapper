@@ -5,6 +5,7 @@ import urllib
 import webbrowser
 
 import spotipy
+import time
 from mutagen.id3 import ID3, ID3NoHeaderError
 
 
@@ -67,6 +68,25 @@ def get_spotify_access_token(client_id, redirect_uri, dialog=False):
     return input('Paste token here: ')
 
 
+def cache_write_access_token(access_token, expiries_at):
+    cache_filename = '.spotify_local_mapper.cache'
+    with open(cache_filename, 'w+') as cache_file:
+        cache_file.write(access_token + '\n' + str(expiries_at))
+
+
+def cache_read_access_token():
+    cache_filename = '.spotify_local_mapper.cache'
+    try:
+        with open(cache_filename, 'r') as cache_file:
+            [access_code, expiries_at] = cache_file.read().splitlines()
+        return access_code, float(expiries_at)
+    except FileNotFoundError:
+        return None, None
+    except ValueError:
+        print('Malformed cache file, delete it', file=sys.stderr)
+        return None, None
+
+
 def main():
     music_dir = input('Directory with MP3 files: ')
     mp3_files = get_mp3_files(music_dir)
@@ -82,8 +102,14 @@ def main():
     client_id = '6224d6d8e66045b59ce328d043aa4b5d'
     redirect_uri = 'https://adgud.github.io/spotify-local-mapper/callback/'
 
-    # use own implementation of getting auth token, because the spotipy's is buggy
-    access_token = get_spotify_access_token(client_id, redirect_uri)
+    access_token, expiries_at = cache_read_access_token()
+
+    # if cache file not found or token expires in less than a minute, prompt user for new token
+    if access_token is None or expiries_at is None or expiries_at < time.time() - 60:
+        # use own implementation of getting auth token, because the spotipy's is buggy
+        access_token = get_spotify_access_token(client_id, redirect_uri)
+        cache_write_access_token(access_token, (time.time() + 3600))
+
     sp = spotipy.Spotify(auth=access_token)
 
     try:
