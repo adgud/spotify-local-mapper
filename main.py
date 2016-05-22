@@ -1,7 +1,10 @@
 import os
 import sys
+import urllib
+import webbrowser
+
+import spotipy
 from mutagen.id3 import ID3, ID3NoHeaderError
-from spotify import Spotify
 
 
 def get_mp3_files(path, include_subdirs=True):
@@ -52,15 +55,32 @@ def read_id3(filename):
     return {'artist':artist, 'title':title, 'album': album}
 
 
+def get_spotify_auth_token(client_id, redirect_url, dialog=False):
+    params = {
+        'client_id': client_id,
+        'response_type': 'token',
+        'redirect_uri': redirect_url,
+        'scope': 'playlist-read-private playlist-modify-private playlist-modify-public playlist-read-collaborative',
+        'show_dialog': 'true' if dialog else 'false'
+    }
+    auth_url = 'https://accounts.spotify.com/authorize' + '?' + urllib.parse.urlencode(params)
+    webbrowser.open(auth_url)
+    return input('Paste token here: ')
+
+
 def main():
     music_dir = input('Directory with MP3 files: ')
     mp3_files = get_mp3_files(music_dir)
 
     playlist_name = input('Playlist name to be created: ')
     spotify_username = input('Spotify username: ')
-    sp = Spotify()
-    sp.auth(spotify_username)
-    playlist_id = sp.create_playlist(playlist_name)
+
+    client_id = '6224d6d8e66045b59ce328d043aa4b5d'
+    redirect_url = 'https://adgud.github.io/spotify-local-mapper/callback/'
+    token = get_spotify_auth_token(client_id, redirect_url)
+    sp = spotipy.Spotify(auth=token)
+    playlist = sp.user_playlist_create(spotify_username, 'test', public=False)
+    playlist_id = playlist['id']
 
     for file in mp3_files:
         print('\nProcessing ', file, '...')
@@ -68,11 +88,15 @@ def main():
         if tags is None:
             continue
 
-        search_result = sp.search(tags['artist'] + ' ' + tags['title'])
-        if search_result is None:
+        query = tags['artist'] + ' ' + tags['title']
+        search_result = sp.search(query)
+        if len(search_result['tracks']['items']) == 0:
+            print('Nothing found for "', query, '"', file=sys.stderr)
             continue
 
-        sp.add_tracks_to_playlist(playlist_id, search_result['uri'])
+        track_uri = search_result['tracks']['items'][0]['uri']
+        sp.user_playlist_add_tracks(spotify_username, playlist_id, [track_uri])
+        print('Added "', search_result['tracks']['items'][0]['name'], '" by ', search_result['tracks']['items'][0]['artists'][0]['name'])
 
 
 if __name__ == '__main__':

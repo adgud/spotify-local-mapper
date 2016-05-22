@@ -8,3 +8,4 @@ This is work in progress project and does not do much yet.
 ### Depends on:
 * requests
 * mutagen
+* spotipy
