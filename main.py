@@ -53,20 +53,26 @@ def read_id3(filename):
 
 
 def main():
-    # testing area below
+    music_dir = input('Directory with MP3 files: ')
+    mp3_files = get_mp3_files(music_dir)
 
-    music_path = './test_media'
-    files = get_mp3_files(music_path, include_subdirs=True)
-    print(files)
-    f = files[len(files)-1]
-    print(f)
-    tags = read_id3(f)
-    print(tags)
+    playlist_name = input('Playlist name to be created: ')
+    spotify_username = input('Spotify username: ')
+    sp = Spotify()
+    sp.auth(spotify_username)
+    playlist_id = sp.create_playlist(playlist_name)
 
-    q = 'Gianna Nannini Meravigliosa Creatura'
-    spotify = Spotify()
+    for file in mp3_files:
+        print('\nProcessing ', file, '...')
+        tags = read_id3(file)
+        if tags is None:
+            continue
 
-    print(spotify.search(q))
+        search_result = sp.search(tags['artist'] + ' ' + tags['title'])
+        if search_result is None:
+            continue
+
+        sp.add_tracks_to_playlist(playlist_id, search_result['uri'])
 
 
 if __name__ == '__main__':
