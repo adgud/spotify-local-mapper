@@ -54,11 +54,11 @@ def read_id3(filename):
     return {'artist':artist, 'title':title, 'album': album}
 
 
-def get_spotify_auth_token(client_id, redirect_url, dialog=False):
+def get_spotify_access_token(client_id, redirect_uri, dialog=False):
     params = {
         'client_id': client_id,
         'response_type': 'token',
-        'redirect_uri': redirect_url,
+        'redirect_uri': redirect_uri,
         'scope': 'playlist-read-private playlist-modify-private playlist-modify-public playlist-read-collaborative',
         'show_dialog': 'true' if dialog else 'false'
     }
@@ -80,11 +80,11 @@ def main():
 
     # you can use your own application created at https://developer.spotify.com/my-applications/
     client_id = '6224d6d8e66045b59ce328d043aa4b5d'
-    redirect_url = 'https://adgud.github.io/spotify-local-mapper/callback/'
+    redirect_uri = 'https://adgud.github.io/spotify-local-mapper/callback/'
 
     # use own implementation of getting auth token, because the spotipy's is buggy
-    token = get_spotify_auth_token(client_id, redirect_url)
-    sp = spotipy.Spotify(auth=token)
+    access_token = get_spotify_access_token(client_id, redirect_uri)
+    sp = spotipy.Spotify(auth=access_token)
 
     try:
         user_profile = sp.me()
