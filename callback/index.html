@@ -5,9 +5,8 @@
     <title>spotify-local-mapper</title>
 </head>
 <body>
-	Copy and paste your token back into the program (it is a single line): <br />
+	Copy and paste this code back into the program (it is a single line): <br />
 	<br />
-	<!-- <input type="text" id="token" value="invalid request" maxlength="250" readonly/> -->
 	<textarea id="token" rows="6" cols="60">invalid request</textarea>
 
 	<script>
@@ -16,9 +15,11 @@
 				var url = window.location.href.split('#')[0];
 				var hash = window.location.hash.substring(1)
 				var auth_token = hash.split('&')[0].split('=')[1];
-				//document.write(auth_token);
-				//document.getElementById("token").value = auth_token;
 				document.getElementById("token").innerHTML = auth_token;
+				document.getElementById("token").select();
+			} else if (window.location.href.split('?')[1].split('&')[0].split('=')[0] == 'code') {
+				var code = window.location.href.split('?')[1].split('&')[0].split('=')[1]
+				document.getElementById("token").innerHTML = code;
 				document.getElementById("token").select();
 			} else {
 				document.body.innerHTML = 'invalid request';
