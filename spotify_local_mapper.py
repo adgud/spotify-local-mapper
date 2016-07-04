@@ -1,12 +1,16 @@
 import os
-import pprint
 import sys
 import urllib
 import webbrowser
 
 import spotipy
+import spotipy.oauth2
 import time
 from mutagen.id3 import ID3, ID3NoHeaderError
+
+scope = 'playlist-read-private playlist-modify-private playlist-modify-public playlist-read-collaborative'
+cache_filename = '.spotify_local_mapper.cache'
+api_data_filename = 'spotify_api_keys.json'
 
 
 def get_mp3_files(path, include_subdirs=True):
@@ -55,12 +59,12 @@ def read_id3(filename):
     return {'artist':artist, 'title':title, 'album': album}
 
 
-def get_spotify_access_token(client_id, redirect_uri, dialog=False):
+def get_spotify_access_token(client_id, redirect_uri, response_type='token', dialog=False):
     params = {
         'client_id': client_id,
-        'response_type': 'token',
+        'response_type': response_type,
         'redirect_uri': redirect_uri,
-        'scope': 'playlist-read-private playlist-modify-private playlist-modify-public playlist-read-collaborative',
+        'scope': scope,
         'show_dialog': 'true' if dialog else 'false'
     }
     auth_url = 'https://accounts.spotify.com/authorize' + '?' + urllib.parse.urlencode(params)
@@ -69,13 +73,18 @@ def get_spotify_access_token(client_id, redirect_uri, dialog=False):
 
 
 def cache_write_access_token(access_token, expiries_at):
-    cache_filename = '.spotify_local_mapper.cache'
     with open(cache_filename, 'w+') as cache_file:
         cache_file.write(access_token + '\n' + str(expiries_at))
 
 
+def read_api_keys():
+    with open(api_data_filename, 'r') as settings_file:
+        import json
+        d = json.load(settings_file)
+    return d['client_id'], d['client_secret'], d['callback_uri']
+
+
 def cache_read_access_token():
-    cache_filename = '.spotify_local_mapper.cache'
     try:
         with open(cache_filename, 'r') as cache_file:
             [access_code, expiries_at] = cache_file.read().splitlines()
@@ -98,17 +107,38 @@ def main():
     if playlist_name is '':
         playlist_name = 'imported tracks'
 
-    # you can use your own application created at https://developer.spotify.com/my-applications/
-    client_id = '6224d6d8e66045b59ce328d043aa4b5d'
-    redirect_uri = 'https://adgud.github.io/spotify-local-mapper/callback/'
+    try:
+        client_id, client_secret, redirect_uri = read_api_keys()
+        auth_type = 'code'
+    except FileNotFoundError:
+        print('No API data file found, will use implicit grant auth', file=sys.stderr)
+        auth_type = 'implicit'
+    except KeyError:
+        print('Malformed API data file, will use implicit grant auth', file=sys.stderr)
+        auth_type = 'implicit'
 
-    access_token, expiries_at = cache_read_access_token()
+    if auth_type is 'code':
+        sp_auth = spotipy.oauth2.SpotifyOAuth(client_id, client_secret, redirect_uri,
+                                              scope=scope, cache_path=cache_filename)
+        cached_auth_data = sp_auth.get_cached_token()
+        if cached_auth_data is None:
+            print(sp_auth.get_authorize_url())
+            code = get_spotify_access_token(client_id, redirect_uri, response_type='code')
+            cached_auth_data = sp_auth.get_access_token(code)
+        access_token = cached_auth_data['access_token']
 
-    # if cache file not found or token expires in less than a minute, prompt user for new token
-    if access_token is None or expiries_at is None or expiries_at < time.time() - 60:
-        # use own implementation of getting auth token, because the spotipy's is buggy
-        access_token = get_spotify_access_token(client_id, redirect_uri)
-        cache_write_access_token(access_token, (time.time() + 3600))
+    elif auth_type is 'implicit':
+        # you can use your own application created at https://developer.spotify.com/my-applications/
+        client_id = '6224d6d8e66045b59ce328d043aa4b5d'
+        redirect_uri = 'https://adgud.github.io/spotify-local-mapper/callback/'
+
+        access_token, expiries_at = cache_read_access_token()
+
+        # if cache file not found or token expires in less than a minute, prompt user for new token
+        if access_token is None or expiries_at is None or expiries_at < time.time() - 60:
+            # use own implementation of getting auth token, because the spotipy's is buggy
+            access_token = get_spotify_access_token(client_id, redirect_uri, response_type='token')
+            cache_write_access_token(access_token, (time.time() + 3600))
 
     sp = spotipy.Spotify(auth=access_token)
 
